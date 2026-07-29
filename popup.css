@@ -149,6 +149,23 @@ button:active {
     box-shadow: 0 5px 14px rgba(211, 47, 47, 0.4);
 }
 
+.status {
+    min-height: 20px;
+    margin-top: 12px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    background: #eef7ff;
+    color: #24516e;
+    font-size: 12px;
+    line-height: 1.35;
+    text-align: center;
+}
+
+.status.error {
+    background: #fff0f0;
+    color: #a52323;
+}
+
 /* --- Auto-scroll checkbox --- */
 .checkbox {
     margin-top: 16px;

@@ -14,6 +14,7 @@ let currentIndex  = 0;
 let isReading     = false;
 let isPaused      = false;
 let activeTabId   = null;
+let playbackId    = 0;
 
 let activeSettings = {
     mode: "article",
@@ -104,6 +105,7 @@ function splitIntoChunks(text) {
 
 /** Cancel all speech and reset state. */
 function stopReading() {
+    playbackId += 1;
     chrome.tts.stop();
     currentChunks = [];
     currentIndex  = 0;
@@ -129,7 +131,8 @@ function resumeReading() {
 }
 
 /** Speak the chunk at the given index, then chain to the next. */
-function speakChunk(index) {
+function speakChunk(index, sessionId) {
+    if (sessionId !== playbackId) return;
     if (index >= currentChunks.length) {
         isReading = false;
         isPaused  = false;
@@ -138,12 +141,18 @@ function speakChunk(index) {
 
     currentIndex = index;
 
-    /* Ask content script to scroll to the matching paragraph */
+    /* Scroll in the page context; no permanently injected script is needed. */
     if (activeSettings.autoScroll && activeTabId) {
-        chrome.tabs.sendMessage(activeTabId, {
-            action: "scroll",
-            index,
-        }).catch(() => { /* tab may have closed */ });
+        chrome.scripting.executeScript({
+            target: { tabId: activeTabId },
+            func: (paragraphIndex) => {
+                const elements = document.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6");
+                elements[Math.min(paragraphIndex, elements.length - 1)]?.scrollIntoView({
+                    behavior: "smooth", block: "center",
+                });
+            },
+            args: [index],
+        }).catch(() => {});
     }
 
     /* Build TTS options */
@@ -152,7 +161,7 @@ function speakChunk(index) {
         enqueue: false,
         onEvent: (event) => {
             if (event.type === "end") {
-                speakChunk(index + 1);
+                speakChunk(index + 1, sessionId);
             } else if (event.type === "error") {
                 console.error("TTS error:", event.errorMessage);
                 isReading = false;
@@ -175,6 +184,7 @@ function speakChunk(index) {
  */
 async function startReading(tabId) {
     stopReading();
+    const sessionId = playbackId;
     activeTabId = tabId;
 
     try {
@@ -192,12 +202,12 @@ async function startReading(tabId) {
                 target: { tabId },
                 func: () => alert("Please select some text on the page first."),
             }).catch(() => {});
-            return;
+            return { ok: false, error: "Select text on the page before choosing Selected text." };
         }
 
         if (!text || !text.trim()) {
             console.warn("No text extracted from page.");
-            return;
+            return { ok: false, error: "No readable text was found on this page." };
         }
 
         currentChunks = splitIntoChunks(text);
@@ -213,10 +223,18 @@ async function startReading(tabId) {
             }).catch(() => {});
         }
 
-        speakChunk(0);
+        speakChunk(0, sessionId);
+        return { ok: true, message: "Reading aloud." };
 
     } catch (err) {
         console.error("Failed to extract text or start TTS:", err);
+        const message = String(err?.message || err);
+        return {
+            ok: false,
+            error: /Cannot access|chrome:\/\//i.test(message)
+                ? "Chrome does not allow extensions to read this internal page. Open a normal website instead."
+                : "Could not read this page. Refresh it and try again.",
+        };
     }
 }
 
@@ -236,21 +254,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         case "read":
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const tab = tabs[0];
-                if (!tab?.id) return;
-                startReading(tab.id);
+                if (!tab?.id) {
+                    sendResponse({ ok: false, error: "No active tab is available to read." });
+                    return;
+                }
+                startReading(tab.id).then(sendResponse);
             });
-            break;
+            return true;
 
         case "pause":
             pauseReading();
+            sendResponse({ ok: true, message: "Reading paused." });
             break;
 
         case "resume":
             resumeReading();
+            sendResponse({ ok: true, message: "Reading resumed." });
             break;
 
         case "stop":
             stopReading();
+            sendResponse({ ok: true, message: "Reading stopped." });
             break;
     }
 });

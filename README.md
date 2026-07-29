@@ -1,6 +1,6 @@
 # 📖 Web Content Reader — Chrome Extension
 
-A lightweight Chrome extension that reads web page content aloud using the **Web Speech API**. Choose between reading just the article, the full page, or selected text — with customisable voice, speed, and auto-scroll.
+A lightweight Chrome extension that reads web page content aloud using Chrome's built-in **Text-to-Speech API**. Choose between reading just the article, the full page, or selected text — with customisable voice, speed, and auto-scroll.
 
 ---
 
@@ -34,8 +34,8 @@ Web-Content-Reader-Extension/
 ├── popup.html         # Extension popup UI
 ├── popup.css          # Popup styles
 ├── popup.js           # Popup logic & settings
-├── content.js         # Content script — text extraction & TTS
-├── background.js      # Service worker (install events)
+├── content.js         # Legacy page helper (not injected)
+├── background.js      # Service worker — text extraction and Chrome TTS
 ├── icon16.png         # Toolbar icon (16×16)
 ├── icon48.png         # Extensions page icon (48×48)
 ├── icon128.png        # Chrome Web Store icon (128×128)
@@ -58,7 +58,7 @@ Web-Content-Reader-Extension/
 ## 🛠️ Tech Stack
 
 - **Manifest V3** — Chrome Extensions API
-- **Web Speech API** — `SpeechSynthesisUtterance` for text-to-speech
+- **Chrome TTS API** — extension-managed text-to-speech
 - **Chrome Storage** — `chrome.storage.sync` for persistent settings
 - **Vanilla JS / CSS / HTML** — zero dependencies
 
