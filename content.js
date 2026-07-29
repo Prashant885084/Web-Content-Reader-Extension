@@ -164,13 +164,15 @@ function readText(text) {
             if (activeSettings.autoScroll) scrollCurrentIntoView(index);
         };
 
-        /* Advance index when an utterance finishes */
+        /* Advance index when an utterance finishes and chain to next */
         utt.onend = () => {
             currentIndex = index + 1;
             if (activeSettings.autoScroll) scrollCurrentIntoView(currentIndex);
             if (currentIndex >= utterances.length) {
                 isReading = false;
                 isPaused  = false;
+            } else if (!isPaused) {
+                speakNext();
             }
         };
 
@@ -191,14 +193,6 @@ function speakNext() {
     if (currentIndex >= utterances.length) return;
     speechSynthesis.speak(utterances[currentIndex]);
 }
-
-/* Chain utterances automatically */
-speechSynthesis.addEventListener("end", () => {
-    currentIndex += 1;
-    if (currentIndex < utterances.length && !isPaused) {
-        speakNext();
-    }
-});
 
 /* ============================================
    Message Listener (from popup)
