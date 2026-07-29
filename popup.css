@@ -1,123 +1,179 @@
+/* ============================================
+   Web Content Reader — Popup Styles
+   ============================================ */
+
+/* --- Reset --- */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* --- Body / Background --- */
 body {
     width: 340px;
     min-height: 460px;
-    font-family: "Segoe UI", Arial, sans-serif;
-
-    background: linear-gradient(135deg, #dff6ff, #b8e8fc);
+    font-family: "Segoe UI", system-ui, Arial, sans-serif;
+    background: linear-gradient(135deg, #dff6ff 0%, #b8e8fc 50%, #a3d8f4 100%);
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 15px;
 }
 
+/* --- Card container --- */
 .app {
     width: 100%;
-    background: white;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
     border-radius: 18px;
-    padding: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, .15);
+    padding: 22px 20px;
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.12),
+        0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* --- Header (icon + title) --- */
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.app-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
 }
 
 h1 {
     text-align: center;
     color: #0077b6;
-    margin-bottom: 20px;
-    font-size: 22px;
+    font-size: 20px;
+    letter-spacing: -0.3px;
 }
 
+/* --- Labels --- */
 .label {
     display: block;
-    margin-bottom: 15px;
+    margin-bottom: 14px;
     color: #333;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
 }
 
+/* --- Dropdowns and range slider --- */
 select,
 input[type="range"] {
     width: 100%;
-    margin-top: 8px;
+    margin-top: 6px;
+    display: block;
 }
 
 select {
-    padding: 10px;
+    padding: 9px 12px;
     border-radius: 10px;
-    border: 2px solid #90caf9;
+    border: 2px solid #c3dff5;
     outline: none;
-    font-size: 14px;
+    font-size: 13px;
     background: #f8fbff;
+    color: #333;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+    appearance: auto;
 }
 
 select:focus {
     border-color: #2196f3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.15);
 }
 
-.row {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 12px;
-}
-
-button {
-    width: 120px;
-    height: 42px;
-
-    border: none;
-    border-radius: 10px;
-
-    background: #2196f3;
-    color: white;
-
-    font-size: 15px;
-    font-weight: bold;
-
+/* Range slider track */
+input[type="range"] {
+    accent-color: #2196f3;
+    height: 6px;
     cursor: pointer;
-
-    transition: .25s;
 }
 
-button:hover {
-    background: #1976d2;
-    transform: translateY(-2px);
-}
-
-button:active {
-    transform: scale(.96);
-}
-
-.checkbox {
-    margin-top: 18px;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    gap: 10px;
-
-    color: #333;
-    font-weight: 600;
-}
-
-.checkbox input {
-    transform: scale(1.2);
-}
-
-.hint {
-    text-align: center;
-    margin-top: 18px;
-    color: #555;
-    font-size: 12px;
-    line-height: 1.5;
-}
-
+/* --- Speed value badge --- */
 #speedValue {
     color: #0077b6;
     font-weight: bold;
+}
+
+/* --- Button rows --- */
+.row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* --- Buttons --- */
+button {
+    flex: 1;
+    max-width: 130px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #42a5f5, #1e88e5);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 8px rgba(33, 150, 243, 0.3);
+}
+
+button:hover {
+    background: linear-gradient(135deg, #1e88e5, #1565c0);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(33, 150, 243, 0.4);
+}
+
+button:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
+}
+
+/* Stop button — distinct red style */
+.btn-stop {
+    background: linear-gradient(135deg, #ef5350, #d32f2f);
+    box-shadow: 0 3px 8px rgba(211, 47, 47, 0.3);
+}
+
+.btn-stop:hover {
+    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+    box-shadow: 0 5px 14px rgba(211, 47, 47, 0.4);
+}
+
+/* --- Auto-scroll checkbox --- */
+.checkbox {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #2196f3;
+    cursor: pointer;
+}
+
+/* --- Hint text --- */
+.hint {
+    text-align: center;
+    margin-top: 16px;
+    color: #777;
+    font-size: 11px;
+    line-height: 1.5;
 }

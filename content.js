@@ -1,14 +1,30 @@
-let utterances = [];
+/**
+ * Web Content Reader — Content Script
+ *
+ * Injected into every page. Extracts text based on the chosen
+ * reading mode, then reads it aloud using the Web Speech API.
+ */
+
+"use strict";
+
+/* ── State ── */
+let utterances   = [];
 let currentIndex = 0;
-let isPaused = false;
-let isReading = false;
+let isPaused     = false;
+let isReading    = false;
+
 let activeSettings = {
     mode: "article",
     voiceName: "",
     speed: 1,
-    autoScroll: true
+    autoScroll: true,
 };
 
+/* ============================================
+   Text Extraction
+   ============================================ */
+
+/** Collapse excessive whitespace and trim. */
 function cleanText(text) {
     return text
         .replace(/\s+/g, " ")
@@ -16,77 +32,95 @@ function cleanText(text) {
         .trim();
 }
 
+/**
+ * Extract the main article / content text from the page,
+ * stripping away navigation, ads, scripts, etc.
+ */
 function getMainText() {
-    const article =
+    const root =
         document.querySelector("article") ||
+        document.querySelector('[role="main"]') ||
         document.querySelector("main") ||
         document.body;
 
-    let clone = article.cloneNode(true);
+    const clone = root.cloneNode(true);
 
-    const removeSelectors = [
-        "nav",
-        "header",
-        "footer",
-        "aside",
-        "script",
-        "style",
-        "noscript",
-        "form",
-        "button",
-        "input",
-        "svg",
-        "canvas",
-        "iframe"
+    // Elements that should never be read aloud
+    const NOISE_SELECTORS = [
+        "nav", "header", "footer", "aside",
+        "script", "style", "noscript",
+        "form", "button", "input", "textarea",
+        "svg", "canvas", "iframe",
+        "[aria-hidden='true']",
+        ".ad", ".advertisement", ".sidebar",
     ];
 
-    removeSelectors.forEach((selector) => {
-        clone.querySelectorAll(selector).forEach((el) => el.remove());
+    NOISE_SELECTORS.forEach((sel) => {
+        clone.querySelectorAll(sel).forEach((el) => el.remove());
     });
 
     return cleanText(clone.innerText || clone.textContent || "");
 }
 
+/** Return the user's current text selection. */
 function getSelectionText() {
-    const text = window.getSelection().toString();
-    return cleanText(text);
+    return cleanText(window.getSelection().toString());
 }
 
+/** Return the full visible text of the page body. */
 function getPageText() {
     return cleanText(document.body.innerText || "");
 }
 
+/* ============================================
+   Chunking & Scrolling
+   ============================================ */
+
+/**
+ * Split text into sentence-sized chunks so the speech engine
+ * can provide smoother playback and better scroll tracking.
+ */
 function splitIntoChunks(text) {
     const parts = text
         .split(/(?<=[.!?])\s+/)
-        .map(s => s.trim())
+        .map((s) => s.trim())
         .filter(Boolean);
 
     return parts.length ? parts : [text];
 }
 
+/** Smoothly scroll the page to the top. */
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+/** Scroll the paragraph matching the current reading index into view. */
 function scrollCurrentIntoView(index) {
-    const paragraphs = document.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6");
-    if (!paragraphs.length) return;
+    const elements = document.querySelectorAll(
+        "p, li, h1, h2, h3, h4, h5, h6"
+    );
+    if (!elements.length) return;
 
-    const target = paragraphs[Math.min(index, paragraphs.length - 1)];
+    const target = elements[Math.min(index, elements.length - 1)];
     if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 }
 
+/* ============================================
+   Playback Controls
+   ============================================ */
+
+/** Cancel all speech and reset state. */
 function stopReading() {
     speechSynthesis.cancel();
-    utterances = [];
+    utterances   = [];
     currentIndex = 0;
-    isPaused = false;
-    isReading = false;
+    isPaused     = false;
+    isReading    = false;
 }
 
+/** Pause the current utterance. */
 function pauseReading() {
     if (isReading) {
         speechSynthesis.pause();
@@ -94,6 +128,7 @@ function pauseReading() {
     }
 }
 
+/** Resume a paused utterance. */
 function resumeReading() {
     if (isPaused) {
         speechSynthesis.resume();
@@ -101,57 +136,63 @@ function resumeReading() {
     }
 }
 
+/**
+ * Build an array of SpeechSynthesisUtterance objects from
+ * the given text, then begin speaking.
+ */
 function readText(text) {
     if (!text) return;
 
     stopReading();
-    isReading = true;
+    isReading    = true;
     currentIndex = 0;
 
-    utterances = splitIntoChunks(text).map((chunk, index) => {
-        const u = new SpeechSynthesisUtterance(chunk);
-        u.rate = activeSettings.speed || 1;
+    const voices        = speechSynthesis.getVoices();
+    const selectedVoice = voices.find((v) => v.name === activeSettings.voiceName);
 
-        const voices = speechSynthesis.getVoices();
-        const selectedVoice = voices.find(v => v.name === activeSettings.voiceName);
+    utterances = splitIntoChunks(text).map((chunk, index) => {
+        const utt  = new SpeechSynthesisUtterance(chunk);
+        utt.rate   = activeSettings.speed || 1;
+
         if (selectedVoice) {
-            u.voice = selectedVoice;
-            u.lang = selectedVoice.lang;
+            utt.voice = selectedVoice;
+            utt.lang  = selectedVoice.lang;
         }
 
-        u.onstart = () => {
-            if (activeSettings.autoScroll) {
-                scrollCurrentIntoView(index);
-            }
+        /* Auto-scroll on utterance start */
+        utt.onstart = () => {
+            if (activeSettings.autoScroll) scrollCurrentIntoView(index);
         };
 
-        u.onend = () => {
+        /* Advance index when an utterance finishes */
+        utt.onend = () => {
             currentIndex = index + 1;
-            if (activeSettings.autoScroll) {
-                scrollCurrentIntoView(currentIndex);
-            }
+            if (activeSettings.autoScroll) scrollCurrentIntoView(currentIndex);
             if (currentIndex >= utterances.length) {
                 isReading = false;
-                isPaused = false;
+                isPaused  = false;
             }
         };
 
-        u.onerror = () => {
+        /* Reset on error */
+        utt.onerror = () => {
             isReading = false;
-            isPaused = false;
+            isPaused  = false;
         };
 
-        return u;
+        return utt;
     });
 
     speakNext();
 }
 
+/** Speak the next queued utterance. */
 function speakNext() {
     if (currentIndex >= utterances.length) return;
     speechSynthesis.speak(utterances[currentIndex]);
 }
 
+/* Chain utterances automatically */
 speechSynthesis.addEventListener("end", () => {
     currentIndex += 1;
     if (currentIndex < utterances.length && !isPaused) {
@@ -159,40 +200,51 @@ speechSynthesis.addEventListener("end", () => {
     }
 });
 
+/* ============================================
+   Message Listener (from popup)
+   ============================================ */
+
 chrome.runtime.onMessage.addListener((message) => {
     if (!message?.action) return;
 
+    // Update active settings when provided
     if (message.settings) {
-        activeSettings = message.settings;
+        activeSettings = { ...activeSettings, ...message.settings };
     }
 
-    if (message.action === "read") {
-        let text = "";
+    switch (message.action) {
+        case "read": {
+            let text = "";
 
-        if (activeSettings.mode === "selection") {
-            text = getSelectionText();
-            if (!text) {
-                alert("Please select some text first.");
-                return;
+            switch (activeSettings.mode) {
+                case "selection":
+                    text = getSelectionText();
+                    if (!text) {
+                        alert("Please select some text on the page first.");
+                        return;
+                    }
+                    break;
+                case "article":
+                    text = getMainText();
+                    break;
+                default:
+                    text = getPageText();
             }
-        } else if (activeSettings.mode === "article") {
-            text = getMainText();
-        } else {
-            text = getPageText();
+
+            readText(text);
+            break;
         }
 
-        readText(text);
-    }
+        case "pause":
+            pauseReading();
+            break;
 
-    if (message.action === "pause") {
-        pauseReading();
-    }
+        case "resume":
+            resumeReading();
+            break;
 
-    if (message.action === "resume") {
-        resumeReading();
-    }
-
-    if (message.action === "stop") {
-        stopReading();
+        case "stop":
+            stopReading();
+            break;
     }
 });
