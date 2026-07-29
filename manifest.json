@@ -1,12 +1,13 @@
 {
     "manifest_version": 3,
     "name": "Web Content Reader",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Read webpages aloud with simple controls.",
     "permissions": [
         "activeTab",
         "storage",
-        "scripting"
+        "scripting",
+        "tts"
     ],
     "host_permissions": [
         "<all_urls>"
