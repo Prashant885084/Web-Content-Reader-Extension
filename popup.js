@@ -3,9 +3,13 @@
  *
  * Handles user settings, voice selection, and sends
  * playback commands to the content script.
+ * Works both as a Chrome extension and on localhost for UI preview.
  */
 
 "use strict";
+
+/* ── Chrome API availability check ── */
+const IS_EXTENSION = typeof chrome !== "undefined" && !!chrome.storage;
 
 /* ── DOM References ── */
 const modeEl       = document.getElementById("mode");
@@ -34,6 +38,8 @@ let voices = [];
 
 /** Load saved settings from Chrome storage and apply to UI. */
 function loadSettings() {
+    if (!IS_EXTENSION) return;
+
     chrome.storage.sync.get(DEFAULTS, (data) => {
         modeEl.value              = data.mode;
         speedEl.value             = String(data.speed);
@@ -50,6 +56,8 @@ function loadSettings() {
 
 /** Persist current UI settings to Chrome storage. */
 function saveSettings() {
+    if (!IS_EXTENSION) return;
+
     chrome.storage.sync.set({
         mode: modeEl.value,
         voiceName: voiceEl.value,
@@ -72,10 +80,12 @@ function loadVoices() {
         voiceEl.appendChild(option);
     }
 
-    // Restore previously selected voice
-    chrome.storage.sync.get({ voiceName: "" }, (data) => {
-        if (data.voiceName) voiceEl.value = data.voiceName;
-    });
+    // Restore previously selected voice (extension only)
+    if (IS_EXTENSION) {
+        chrome.storage.sync.get({ voiceName: "" }, (data) => {
+            if (data.voiceName) voiceEl.value = data.voiceName;
+        });
+    }
 }
 
 /* ── Initialisation ── */
@@ -101,6 +111,11 @@ autoScrollEl.addEventListener("change", saveSettings);
  * the current settings to the active tab's content script.
  */
 function sendAction(action) {
+    if (!IS_EXTENSION) {
+        console.log(`[Preview] Action: ${action}`);
+        return;
+    }
+
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const tab = tabs[0];
         if (!tab?.id) return;
