@@ -44,17 +44,6 @@ The reader runs as a Manifest V3 extension and extracts text only when you press
 | **Chrome Storage API** | Saves the reader settings using `chrome.storage.sync`. |
 | **HTML, CSS, and Vanilla JavaScript** | Builds the popup interface and extension logic without third-party dependencies. |
 
-## Install locally
-
-1. Download or clone this repository.
-2. Open Chrome and go to `chrome://extensions`.
-3. Turn on **Developer mode** in the top-right corner.
-4. Click **Load unpacked**.
-5. Select the `Web-Content-Reader-Extension` folder.
-6. Pin the extension from Chrome's Extensions menu for quick access.
-
-Whenever you update the files, return to `chrome://extensions` and click the refresh icon on the extension card.
-
 ## How to use
 
 1. Open a regular webpage containing readable text.
